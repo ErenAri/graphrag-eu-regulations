@@ -1,0 +1,20 @@
+[
+  {
+    "query": "Markets in Crypto-Assets Regulation",
+    "as_of_date": "2024-07-01",
+    "expected_expression_id": "EU-MICA-2024",
+    "jurisdiction": "EU"
+  },
+  {
+    "query": "Crypto-Assets Regulation",
+    "as_of_date": "2024-06-30",
+    "expected_expression_id": "EU-MICA-2024",
+    "jurisdiction": "EU"
+  },
+  {
+    "query": "Subject matter",
+    "as_of_date": "2024-12-31",
+    "expected_expression_id": "EU-MICA-2024",
+    "jurisdiction": "EU"
+  }
+]

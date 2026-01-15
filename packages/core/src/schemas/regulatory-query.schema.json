@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegulatoryQuery",
+  "type": "object",
+  "properties": {
+    "user_id": { "type": "string" },
+    "jurisdiction": { "type": "string", "const": "EU" },
+    "question": { "type": "string" },
+    "context": { "type": "string" }
+  },
+  "required": ["user_id", "jurisdiction", "question"],
+  "additionalProperties": false
+}

@@ -1,0 +1,8 @@
+{
+  "name": "eu-fintech-reg-assistant",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/core"
+  ]
+}

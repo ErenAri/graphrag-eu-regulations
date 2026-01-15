@@ -1,0 +1,59 @@
+version: "3.9"
+services:
+  neo4j:
+    image: neo4j:5.21
+    environment:
+      NEO4J_AUTH: "${NEO4J_USER}/${NEO4J_PASSWORD}"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", "cypher-shell -u ${NEO4J_USER} -p ${NEO4J_PASSWORD} 'RETURN 1'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  api:
+    build: ./apps/api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"" ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - LD_LIBRARY_PATH=/wsl-lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+      - LIBRARY_PATH=/wsl-lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+    ports:
+      - "8001:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./.wsl-lib:/wsl-lib:ro
+    command: >
+      --model Qwen/Qwen2.5-1.5B-Instruct --served-model-name eu-reg-copilot --host 0.0.0.0 --port 8000 --dtype float16 --max-model-len 2048 --gpu-memory-utilization 0.8 --enforce-eager
+volumes:
+  neo4j-data:
