@@ -1,4 +1,4 @@
-﻿import hashlib
+import hashlib
 import math
 import re
 from functools import lru_cache
@@ -38,11 +38,29 @@ def hash_embedding(text: str, dimensions: int) -> List[float]:
 def hf_embedding(text: str) -> List[float]:
     settings = get_settings()
     model = get_hf_model()
-    vector = model.encode([text], normalize_embeddings=True)
+    vector = model.encode(
+        [text],
+        batch_size=max(1, settings.embed_batch_size),
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
     embedding = vector[0].tolist()
     if len(embedding) != settings.vector_dimensions:
         raise ValueError("embedding_dimension_mismatch")
     return embedding
+
+
+def resolve_hf_device(configured_device: str | None) -> str:
+    if configured_device:
+        return configured_device
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
 
 
 @lru_cache
@@ -50,5 +68,5 @@ def get_hf_model():
     from sentence_transformers import SentenceTransformer
 
     settings = get_settings()
-    device = settings.embed_device or "cpu"
+    device = resolve_hf_device(settings.embed_device)
     return SentenceTransformer(settings.embed_model, device=device)

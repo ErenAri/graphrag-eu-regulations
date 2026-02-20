@@ -1,5 +1,7 @@
+import concurrent.futures
 import os
 import re
+import time
 from typing import Dict, List, Optional, Tuple
 
 from llama_index.core.prompts import PromptTemplate
@@ -96,7 +98,7 @@ def generate_answer(
         citation_chunk_size=512,
     )
     query_text = build_query_text(question, role, as_of_date, jurisdiction)
-    response = query_engine.query(query_text)
+    response = query_with_retry(query_engine, query_text)
     raw_answer = str(response)
     mapped_answer, invalid = map_citations(raw_answer, response.source_nodes)
     retrieved_ids = {paragraph["paragraph_id"] for paragraph in paragraphs}
@@ -170,6 +172,23 @@ def build_llm() -> OpenAI:
             api_base=api_base,
             additional_kwargs={"model": model_name},
         )
+
+
+def query_with_retry(query_engine: CitationQueryEngine, query_text: str):
+    settings = get_settings()
+    attempts = max(1, settings.llm_max_retries + 1)
+    for attempt in range(1, attempts + 1):
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(query_engine.query, query_text)
+                return future.result(timeout=settings.llm_timeout_seconds)
+        except concurrent.futures.TimeoutError as exc:
+            if attempt >= attempts:
+                raise RuntimeError("llm_timeout") from exc
+        except Exception:
+            if attempt >= attempts:
+                raise
+        time.sleep(min(0.2 * (2 ** (attempt - 1)), 2.0))
 
 
 def map_citations(answer_text: str, source_nodes: Optional[List[NodeWithScore]]) -> Tuple[str, bool]:

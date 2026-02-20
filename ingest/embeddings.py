@@ -1,8 +1,8 @@
-﻿import hashlib
+import hashlib
 import math
 import re
 from functools import lru_cache
-from typing import List
+from typing import List, Sequence
 
 from ingest.config import get_settings
 
@@ -10,12 +10,16 @@ TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
 
 
 def embed_text(text: str) -> List[float]:
+    return embed_texts([text])[0]
+
+
+def embed_texts(texts: Sequence[str]) -> List[List[float]]:
     settings = get_settings()
     provider = settings.embed_provider.lower()
     if provider == "hash":
-        return hash_embedding(text, settings.vector_dimensions)
+        return [hash_embedding(text, settings.vector_dimensions) for text in texts]
     if provider == "hf":
-        return hf_embedding(text)
+        return hf_embeddings(texts)
     raise ValueError("unknown_embed_provider")
 
 
@@ -36,13 +40,39 @@ def hash_embedding(text: str, dimensions: int) -> List[float]:
 
 
 def hf_embedding(text: str) -> List[float]:
+    return hf_embeddings([text])[0]
+
+
+def hf_embeddings(texts: Sequence[str]) -> List[List[float]]:
+    text_values = list(texts)
+    if not text_values:
+        return []
     settings = get_settings()
     model = get_hf_model()
-    vector = model.encode([text], normalize_embeddings=True)
-    embedding = vector[0].tolist()
-    if len(embedding) != settings.vector_dimensions:
-        raise ValueError("embedding_dimension_mismatch")
-    return embedding
+    vectors = model.encode(
+        text_values,
+        batch_size=max(1, settings.embed_batch_size),
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
+    embeddings = vectors.tolist()
+    for embedding in embeddings:
+        if len(embedding) != settings.vector_dimensions:
+            raise ValueError("embedding_dimension_mismatch")
+    return embeddings
+
+
+def resolve_hf_device(configured_device: str | None) -> str:
+    if configured_device:
+        return configured_device
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
 
 
 @lru_cache
@@ -50,5 +80,5 @@ def get_hf_model():
     from sentence_transformers import SentenceTransformer
 
     settings = get_settings()
-    device = settings.embed_device or "cpu"
+    device = resolve_hf_device(settings.embed_device)
     return SentenceTransformer(settings.embed_model, device=device)

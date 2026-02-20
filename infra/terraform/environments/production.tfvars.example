@@ -1,0 +1,46 @@
+project_id   = "your-gcp-project-id"
+region       = "us-central1"
+environment  = "production"
+name_prefix  = "sat-graph-rag"
+api_image    = "us-central1-docker.pkg.dev/your-gcp-project-id/sat/api:production"
+web_image    = "us-central1-docker.pkg.dev/your-gcp-project-id/sat/web:production"
+
+api_allow_unauthenticated = false
+web_allow_unauthenticated = true
+
+api_min_instances = 1
+api_max_instances = 20
+web_min_instances = 1
+web_max_instances = 10
+
+enable_observability_artifacts   = true
+monitoring_notification_channel_ids = [
+  "projects/your-gcp-project-id/notificationChannels/1234567890123456789",
+]
+
+api_env = {
+  LOG_LEVEL            = "INFO"
+  AUTH_ENABLED         = "true"
+  OIDC_PROVIDER        = "entra"
+  OIDC_ROLES_CLAIM     = "roles"
+  OIDC_GROUPS_CLAIM    = "groups"
+  RATE_LIMIT_ENABLED   = "true"
+  RATE_LIMIT_BACKEND   = "redis"
+  RATE_LIMIT_FAIL_OPEN = "false"
+}
+
+api_secret_env = {
+  OPENAI_API_KEY       = "openai-api-key-production"
+  NEO4J_URI            = "neo4j-uri-production"
+  NEO4J_USER           = "neo4j-user-production"
+  NEO4J_PASSWORD       = "neo4j-password-production"
+  OIDC_ISSUER          = "oidc-issuer-production"
+  OIDC_AUDIENCE        = "oidc-audience-production"
+  OIDC_JWKS_URL        = "oidc-jwks-url-production"
+  OIDC_TENANT_ID       = "oidc-tenant-id-production"
+  RATE_LIMIT_REDIS_URL = "rate-limit-redis-url-production"
+}
+
+web_env = {
+  NEXT_PUBLIC_API_URL = "https://api.example.com"
+}

@@ -1,12 +1,37 @@
+import logging
 import re
+import time
 from datetime import date
 from typing import Dict, List, Optional, Tuple
 
+from neo4j.exceptions import SessionExpired, ServiceUnavailable
+
+from app.core.config import get_settings
 from app.db.neo4j import get_driver
 from app.services.embeddings import embed_text
 
+logger = logging.getLogger(__name__)
+
+
+def run_query(cypher: str, params: Dict[str, object]) -> List[Dict[str, object]]:
+    settings = get_settings()
+    attempts = max(1, settings.neo4j_max_retries + 1)
+    delay = max(0.0, settings.neo4j_retry_backoff_seconds)
+    for attempt in range(1, attempts + 1):
+        driver = get_driver()
+        try:
+            with driver.session() as session:
+                return session.run(cypher, params).data()
+        except (ServiceUnavailable, SessionExpired):
+            if attempt >= attempts:
+                raise
+            sleep_seconds = delay * (2 ** (attempt - 1))
+            logger.warning("neo4j_retry_attempt:%s", attempt)
+            time.sleep(sleep_seconds)
+    return []
+
+
 def search_items(query: str, metadata_filter: Optional[Dict[str, object]], limit: int = 10) -> List[Dict[str, object]]:
-    driver = get_driver()
     filters = metadata_filter or {}
     query_value = query.strip().lower()
     if not query_value:
@@ -38,8 +63,7 @@ def search_items(query: str, metadata_filter: Optional[Dict[str, object]], limit
         "ORDER BY score DESC, title ASC, id ASC "
         "LIMIT $limit"
     )
-    with driver.session() as session:
-        records = session.run(cypher, params).data()
+    records = run_query(cypher, params)
     results = []
     for record in records:
         kind = record["kind"]
@@ -80,12 +104,10 @@ def get_valid_version(component_id: str, target_date: str) -> Dict[str, object]:
         target_date_value = date.fromisoformat(target_date).isoformat()
     except ValueError as exc:
         raise ValueError("invalid_target_date") from exc
-    driver = get_driver()
-    with driver.session() as session:
-        records = session.run(
-            query,
-            {"identifier": identifier, "target_date": target_date_value},
-        ).data()
+    records = run_query(
+        query,
+        {"identifier": identifier, "target_date": target_date_value},
+    )
     if not records:
         raise LookupError("expression_not_found")
     if len(records) > 1:
@@ -100,7 +122,6 @@ def get_valid_version(component_id: str, target_date: str) -> Dict[str, object]:
 
 
 def search_text_units(expression_id: str, semantic_query: str, top_k: int = 5) -> List[Dict[str, object]]:
-    driver = get_driver()
     query_value = semantic_query.strip()
     if not query_value:
         return []
@@ -121,16 +142,15 @@ def search_text_units(expression_id: str, semantic_query: str, top_k: int = 5) -
         "ORDER BY score DESC, paragraph_id ASC "
         "LIMIT $top_k"
     )
-    with driver.session() as session:
-        vector_results = session.run(
-            vector_cypher,
-            {
-                "expression_id": expression_id,
-                "embedding": embedding,
-                "vector_k": vector_k,
-                "top_k": max(top_k, 1),
-            },
-        ).data()
+    vector_results = run_query(
+        vector_cypher,
+        {
+            "expression_id": expression_id,
+            "embedding": embedding,
+            "vector_k": vector_k,
+            "top_k": max(top_k, 1),
+        },
+    )
     results = normalize_paragraph_results(vector_results, expression_id, "vector")
     if len(results) >= max(top_k, 1):
         return results
@@ -147,7 +167,6 @@ def search_text_units(expression_id: str, semantic_query: str, top_k: int = 5) -
 
 
 def keyword_search(expression_id: str, query_value: str, top_k: int) -> List[Dict[str, object]]:
-    driver = get_driver()
     keyword_cypher = (
         "MATCH (e:Expression {expression_id: $expression_id})-[:HAS_ARTICLE]->(a:Article)-[:HAS_PARAGRAPH]->(p:Paragraph) "
         "WHERE toLower(p.text) CONTAINS $query "
@@ -161,11 +180,10 @@ def keyword_search(expression_id: str, query_value: str, top_k: int) -> List[Dic
         "ORDER BY paragraph_id ASC "
         "LIMIT $top_k"
     )
-    with driver.session() as session:
-        records = session.run(
-            keyword_cypher,
-            {"expression_id": expression_id, "query": query_value.lower(), "top_k": top_k},
-        ).data()
+    records = run_query(
+        keyword_cypher,
+        {"expression_id": expression_id, "query": query_value.lower(), "top_k": top_k},
+    )
     return normalize_paragraph_results(records, expression_id, "keyword")
 
 

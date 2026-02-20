@@ -5,8 +5,7 @@ from datetime import date
 from typing import Dict, List, Optional
 
 from ingest.chunking import split_articles, split_paragraphs
-from ingest.config import get_settings
-from ingest.embeddings import embed_text
+from ingest.embeddings import embed_texts
 from ingest.neo4j import close_driver, get_driver
 from ingest.parsers import parse_content
 from ingest.sources import fetch_source
@@ -52,25 +51,24 @@ def run_ingest(
 
 
 def build_articles(text: str, work_title: str, expression_id: str) -> List[Dict[str, object]]:
-    articles = []
+    articles: List[Dict[str, object]] = []
+    paragraph_records: List[Dict[str, object]] = []
     for article in split_articles(text, work_title):
         number = str(article["number"]).strip()
         title = str(article["title"]).strip() if article["title"] else None
         article_id = f"{expression_id}-A{number}"
-        paragraphs = []
+        paragraphs: List[Dict[str, object]] = []
         for paragraph in split_paragraphs(article["body"]):
             paragraph_number = str(paragraph["number"]).strip()
             text_value = paragraph["text"].strip()
-            embedding = embed_text(text_value)
             paragraph_id = f"{article_id}-P{paragraph_number}"
-            paragraphs.append(
-                {
-                    "paragraph_id": paragraph_id,
-                    "number": paragraph_number,
-                    "text": text_value,
-                    "embedding": embedding,
-                }
-            )
+            paragraph_payload: Dict[str, object] = {
+                "paragraph_id": paragraph_id,
+                "number": paragraph_number,
+                "text": text_value,
+            }
+            paragraphs.append(paragraph_payload)
+            paragraph_records.append(paragraph_payload)
         articles.append(
             {
                 "article_id": article_id,
@@ -79,6 +77,11 @@ def build_articles(text: str, work_title: str, expression_id: str) -> List[Dict[
                 "paragraphs": paragraphs,
             }
         )
+    embeddings = embed_texts([str(paragraph["text"]) for paragraph in paragraph_records])
+    if len(embeddings) != len(paragraph_records):
+        raise ValueError("embedding_count_mismatch")
+    for paragraph, embedding in zip(paragraph_records, embeddings):
+        paragraph["embedding"] = embedding
     return articles
 
 

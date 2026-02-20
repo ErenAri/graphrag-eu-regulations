@@ -1,0 +1,231 @@
+{
+    "version":  1,
+    "generated_on":  "2026-02-20",
+    "policy":  "Block CI on unapproved Python vulnerabilities; allow only time-bounded, owner-assigned exceptions.",
+    "exceptions":  [
+                       {
+                           "package":  "ecdsa",
+                           "vulnerability_id":  "CVE-2024-23342",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "langchain-core",
+                           "vulnerability_id":  "CVE-2025-68664",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "langchain-core",
+                           "vulnerability_id":  "CVE-2025-65106",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "requests",
+                           "vulnerability_id":  "CVE-2024-47081",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index",
+                           "vulnerability_id":  "CVE-2025-7707",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "langgraph-checkpoint",
+                           "vulnerability_id":  "CVE-2025-64439",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index-core",
+                           "vulnerability_id":  "CVE-2025-7647",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2025-66019",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2025-62708",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index-core",
+                           "vulnerability_id":  "CVE-2025-5302",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index",
+                           "vulnerability_id":  "PYSEC-2025-11",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index",
+                           "vulnerability_id":  "CVE-2025-6211",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2026-22691",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2026-22690",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "langchain-core",
+                           "vulnerability_id":  "CVE-2026-26013",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "starlette",
+                           "vulnerability_id":  "CVE-2025-54121",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2025-55197",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "python-jose",
+                           "vulnerability_id":  "PYSEC-2024-233",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "python-jose",
+                           "vulnerability_id":  "PYSEC-2024-232",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index-core",
+                           "vulnerability_id":  "CVE-2025-5472",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index-core",
+                           "vulnerability_id":  "CVE-2025-6208",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index",
+                           "vulnerability_id":  "CVE-2024-12911",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index",
+                           "vulnerability_id":  "CVE-2024-12704",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2026-24688",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index",
+                           "vulnerability_id":  "CVE-2025-1793",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "llama-index-cli",
+                           "vulnerability_id":  "CVE-2025-1753",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "starlette",
+                           "vulnerability_id":  "CVE-2024-47874",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       },
+                       {
+                           "package":  "pypdf",
+                           "vulnerability_id":  "CVE-2025-62707",
+                           "reason":  "Dependency is pinned for platform compatibility; remediation planned in dependency modernization phase.",
+                           "owner":  "platform-security",
+                           "expires_on":  "2026-06-30",
+                           "tracking_issue":  "SEC-DEPENDENCY-MODERNIZATION"
+                       }
+                   ]
+}

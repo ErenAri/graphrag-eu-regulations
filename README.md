@@ -1,269 +1,192 @@
-# GraphRAG-EU-Regulations
-
-> **A Graph-based Retrieval-Augmented Generation Framework for Temporal Legal Document Analysis**
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-green.svg)](https://python.org)
-[![Neo4j 5.x](https://img.shields.io/badge/Neo4j-5.x-blue.svg)](https://neo4j.com)
+# SAT Graph RAG
 
 ## Abstract
+SAT Graph RAG is a graph-based retrieval-augmented generation system for temporally constrained analysis of regulatory texts. The system integrates a FastAPI service, a Neo4j knowledge graph, an ingestion pipeline for source material normalization, and a web client for interactive querying. The design objective is to support answer generation with explicit citation grounding and enforceable operational controls.
 
-This repository presents a novel Graph-based Retrieval-Augmented Generation (GraphRAG) system designed for the semantic analysis and temporal querying of regulatory documents within the European Union legal framework. The system implements the **Functional Requirements for Bibliographic Records (FRBR)** ontology to model hierarchical legal structures, enabling precise version control, temporal validity tracking, and citation-aware question answering.
+## Research and Engineering Objectives
+- Represent regulatory documents with explicit structural and temporal semantics.
+- Retrieve evidence that is both semantically relevant and valid at a specified point in time.
+- Generate answers constrained by retrieved evidence and citation validity checks.
+- Provide deployment and operations controls suitable for staged production release.
 
-The architecture addresses three critical challenges in legal AI systems:
-1. **Temporal Precision** — Ensuring retrieved content reflects the law as it stood at a specified point in time
-2. **Citation Grounding** — Every generated response includes verifiable references to source paragraphs
-3. **Adversarial Robustness** — Implementing guardrails to refuse out-of-scope or manipulative queries
+## System Components
+- `apps/api`: FastAPI application implementing retrieval, orchestration, and answer generation.
+- `apps/web`: Next.js interface for query submission and service health checks.
+- `ingest`: ingestion pipeline for document acquisition, parsing, chunking, embedding, and graph persistence.
+- `eval`: evaluation runner and fixtures for temporal precision, citation validity, and refusal behavior.
+- `apps/api/migrations`: versioned Cypher migrations for graph schema and seed state.
 
----
+## Production Baseline
+The repository currently targets the following deployment profile:
+- API and web services on Cloud Run.
+- Neo4j AuraDB for graph persistence.
+- OpenAI-compatible managed model endpoint for inference.
+- Containerized ingestion and evaluation jobs executed with workload identity.
 
-## System Architecture
+Reference documents:
+- `docs/architecture.md`
+- `docs/operability.md`
+- `docs/security.md`
+- `docs/deployment-canary.md`
+- `docs/config-profiles.md`
+- `docs/runbooks/README.md`
 
-```mermaid
-flowchart TB
-    subgraph Client["Client Layer"]
-        WEB[Next.js Web Application]
-    end
-
-    subgraph API["API Layer"]
-        FASTAPI[FastAPI Service]
-        ORCH[Orchestration Engine]
-        ANS[Answering Service]
-        REF[Refusal Guardrails]
-    end
-
-    subgraph Knowledge["Knowledge Graph Layer"]
-        NEO4J[(Neo4j Graph Database)]
-        EMB[Vector Embeddings]
-    end
-
-    subgraph LLM["Language Model Layer"]
-        VLLM[vLLM Inference Server]
-        QWEN[Qwen2.5-1.5B-Instruct]
-    end
-
-    subgraph Ingest["Ingestion Pipeline"]
-        PARSER[Document Parser]
-        CHUNK[Hierarchical Chunker]
-        EMBED[Embedding Generator]
-    end
-
-    WEB --> FASTAPI
-    FASTAPI --> ORCH
-    ORCH --> ANS
-    ORCH --> REF
-    ANS --> NEO4J
-    ANS --> VLLM
-    VLLM --> QWEN
-    NEO4J --> EMB
-    
-    PARSER --> CHUNK --> EMBED --> NEO4J
-```
-
----
-
-## FRBR-Based Legal Ontology
-
-The knowledge graph implements the **FRBR (Functional Requirements for Bibliographic Records)** model, adapted for legal documents. This hierarchical structure enables precise temporal versioning and cross-referencing of regulatory texts.
-
-```mermaid
-erDiagram
-    WORK ||--o{ EXPRESSION : "HAS_EXPRESSION"
-    EXPRESSION ||--o{ MANIFESTATION : "HAS_MANIFESTATION"
-    EXPRESSION ||--o{ ARTICLE : "HAS_ARTICLE"
-    ARTICLE ||--o{ PARAGRAPH : "HAS_PARAGRAPH"
-
-    WORK {
-        string work_id PK
-        string title
-        string jurisdiction
-        int authority_level
-    }
-
-    EXPRESSION {
-        string expression_id PK
-        date valid_from
-        date valid_to
-    }
-
-    MANIFESTATION {
-        string manifestation_id PK
-        string source_url
-        string file_hash
-        string content_type
-        date published_date
-    }
-
-    ARTICLE {
-        string article_id PK
-        string number
-        string title
-    }
-
-    PARAGRAPH {
-        string paragraph_id PK
-        string number
-        string text
-        float[] embedding
-    }
-```
-
-### Ontology Semantics
-
-| Entity | Description | Temporal Scope |
-|--------|-------------|----------------|
-| **Work** | Abstract legal concept (e.g., GDPR as a regulation) | Permanent identifier |
-| **Expression** | Specific version of a Work valid during a time period | `valid_from` → `valid_to` |
-| **Manifestation** | Physical representation (PDF, HTML) with integrity hash | Publication date |
-| **Article** | Structural unit within an Expression | Inherited from Expression |
-| **Paragraph** | Atomic text unit with dense vector embedding | Inherited from Expression |
-
----
-
-## Retrieval Pipeline
-
-The retrieval mechanism implements a **hybrid search strategy** combining semantic similarity with temporal filtering:
-
-```mermaid
-sequenceDiagram
-    participant U as User Query
-    participant O as Orchestrator
-    participant T as Temporal Resolver
-    participant V as Vector Search
-    participant G as Graph Traversal
-    participant L as LLM
-
-    U->>O: Question + as_of_date
-    O->>T: Resolve temporal scope
-    T-->>O: Target date
-    O->>V: Semantic search (top-k)
-    V-->>O: Candidate paragraphs
-    O->>G: Filter by Expression validity
-    G-->>O: Temporally-valid paragraphs
-    O->>L: Generate with citations
-    L-->>O: Grounded answer
-    O-->>U: Response + [paragraph_ids]
-```
-
-### Key Algorithms
-
-1. **Temporal Scoping**: Queries are resolved against the `valid_from` and `valid_to` bounds of Expressions
-2. **Vector Similarity**: Paragraph embeddings enable semantic retrieval via cosine similarity
-3. **Citation Extraction**: Responses are validated to ensure all `[paragraph_id]` references exist in the retrieved context
-
----
-
-## Evaluation Framework
-
-The system includes a rigorous evaluation suite measuring three core metrics:
-
-| Metric | Threshold | Description |
-|--------|-----------|-------------|
-| **Temporal Precision** | ≥ 1.00 | Retrieved paragraphs must belong to the correct temporal Expression |
-| **Citation Accuracy** | ≥ 1.00 | All citations in generated answers must reference retrieved paragraphs |
-| **Refusal Rate** | > 0.95 | Adversarial/out-of-scope queries must be refused |
-
-```bash
-# Execute evaluation suite
-python -m eval run
-```
-
----
-
-## Project Structure
-
-```
-├── apps/
-│   ├── api/                    # FastAPI backend service
-│   │   ├── app/
-│   │   │   ├── api/            # REST endpoint definitions
-│   │   │   ├── core/           # Configuration and settings
-│   │   │   ├── db/             # Neo4j connection and schema
-│   │   │   └── services/       # Business logic
-│   │   │       ├── actions.py      # Search and retrieval
-│   │   │       ├── answering.py    # LLM-based generation
-│   │   │       ├── orchestration.py# Query coordination
-│   │   │       └── refusal.py      # Guardrail implementation
-│   │   └── migrations/         # Database schema migrations
-│   └── web/                    # Next.js frontend application
-├── ingest/                     # Document ingestion pipeline
-│   ├── pipeline.py             # Main orchestration
-│   ├── chunking.py             # Article/paragraph extraction
-│   ├── embeddings.py           # Vector embedding generation
-│   └── parsers.py              # Document format parsers
-├── eval/                       # Evaluation framework
-│   ├── runner.py               # Test execution engine
-│   └── fixtures/               # Gold-standard test cases
-├── packages/
-│   └── core/                   # Shared TypeScript utilities
-└── docker-compose.yml          # Container orchestration
-```
-
----
-
-## Deployment
-
+## Local Development Setup
 ### Prerequisites
-
-- Docker & Docker Compose
-- NVIDIA GPU with CUDA support (for vLLM inference)
 - Python 3.11+
+- Node.js 20+
+- Docker and Docker Compose
 
-### Quick Start
-
+### Installation
 ```bash
-# Clone repository
-git clone https://github.com/<your-username>/graphrag-eu-regulations.git
-cd graphrag-eu-regulations
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your Neo4j credentials and API keys
-
-# Launch services
-docker-compose up -d
-
-# Ingest sample regulations
-python -m ingest --source <regulation-url> --title "Sample Regulation"
-
-# Access application
-# Web UI: http://localhost:3000
-# API:    http://localhost:8000/docs
+cp .env.host.example .env.host
+cp .env.docker.example .env.docker
+npm install --workspaces
+python -m venv venv
+venv/Scripts/pip install -r apps/api/requirements-dev.txt
 ```
 
----
+### Optional CUDA Acceleration
+For local NVIDIA GPUs, install the CUDA-enabled PyTorch overlay:
 
-## Technical Specifications
+```bash
+venv/Scripts/python -m pip install -r apps/api/requirements-gpu-cu126.txt
+```
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Graph Database** | Neo4j 5.21 | FRBR ontology storage, Cypher queries |
-| **Vector Index** | Neo4j native embeddings | Semantic similarity search |
-| **LLM Inference** | vLLM + Qwen2.5-1.5B-Instruct | Answer generation |
-| **Backend API** | FastAPI (Python 3.11) | RESTful service layer |
-| **Frontend** | Next.js | User interface |
-| **Containerization** | Docker Compose | Service orchestration |
+Then configure embedding execution:
+- `EMBED_PROVIDER=hf`
+- `EMBED_DEVICE=cuda` (or leave empty for auto-detection)
+- `EMBED_BATCH_SIZE=<tuned value>`
 
----
+For `hf` embeddings, `NEO4J_VECTOR_DIMENSIONS` must match `EMBED_DIM`.
+Batch-size tuning can be executed with:
 
-## Research Applications
+```bash
+venv/Scripts/python scripts/benchmark_embedding_batch.py --samples 512 --words-per-sample 220
+```
 
-This framework is designed to support research in:
+Empirical reference for an RTX 2060 (6 GB) with `BAAI/bge-m3`:
+- benchmark date: February 20, 2026
+- recommended batch size: `80`
 
-- **Legal Information Retrieval**: Temporal-aware document search
-- **Explainable AI for Law**: Citation-grounded answer generation
-- **Regulatory Compliance**: Automated policy interpretation
-- **Knowledge Graph Construction**: FRBR-based legal ontology engineering
+After changing embedding dimensions, run migration reconciliation:
 
+```bash
+PYTHONPATH=apps/api venv/Scripts/python -m app.db.migrate
+```
 
----
+### Start dependencies and apply migrations
+```bash
+docker-compose --env-file .env.docker up -d neo4j
+APP_ENV_FILE=.env.host PYTHONPATH=apps/api venv/Scripts/python -m app.db.migrate
+```
+
+### Run API tests and checks
+```bash
+APP_ENV_FILE=.env.host PYTHONPATH=apps/api venv/Scripts/python -m pytest apps/api/tests
+venv/Scripts/python -m ruff check apps/api/app apps/api/tests ingest eval
+APP_ENV_FILE=.env.host PYTHONPATH=apps/api venv/Scripts/python -m mypy apps/api/app/core
+```
+
+### Run web checks
+```bash
+npm run --workspace packages/core typecheck
+npm run --workspace apps/web typecheck
+npm run --workspace packages/core build
+npm run --workspace apps/web build
+```
+
+## Configuration Model
+Configuration is loaded from environment variables and validated at startup. The `.env.example` file provides a complete key set. The following variables govern production-critical behavior:
+
+- Authentication and OIDC:
+  - `AUTH_ENABLED`
+  - `OIDC_PROVIDER`
+  - `OIDC_TENANT_ID`
+  - `OIDC_ISSUER`
+  - `OIDC_AUDIENCE`
+  - `OIDC_JWKS_URL`
+  - `OIDC_ROLES_CLAIM`
+  - `OIDC_GROUPS_CLAIM`
+  - `OIDC_GROUP_ROLE_MAP`
+- Rate limiting:
+  - `RATE_LIMIT_ENABLED`
+  - `RATE_LIMIT_BACKEND` (`memory` or `redis`)
+  - `RATE_LIMIT_REDIS_URL`
+  - `RATE_LIMIT_WINDOW_SECONDS`
+  - `RATE_LIMIT_ROUTE_LIMITS`
+  - `RATE_LIMIT_TRUST_PROXY`
+  - `RATE_LIMIT_FAIL_OPEN`
+- Data and migration:
+  - `NEO4J_URI`
+  - `NEO4J_USER`
+  - `NEO4J_PASSWORD`
+  - `AUTO_MIGRATE_ON_STARTUP`
+
+## Security and Authorization
+- OIDC JWT verification includes signature, issuer, audience, and tenant validation for Entra profile deployments.
+- Canonical RBAC roles are extracted from the `roles` claim.
+- Optional fallback mapping from `groups` to RBAC roles is supported through `OIDC_GROUP_ROLE_MAP`.
+- Route authorization policy:
+  - retrieval and temporal endpoints: `read_only`, `compliance_analyst`, `admin`
+  - answer generation endpoints: `compliance_analyst`, `admin`
+- Request correlation is enforced through request IDs propagated in logs and response headers.
+- Web framework remediation is applied through Next.js `15.5.10`; compensating controls remain enabled to disable image optimization and reject `/_next/image`, `next-action`, and non-read web requests.
+
+## Rate Limiting
+The API supports two limiter backends:
+- in-memory limiter for local development and single-instance execution,
+- Redis-backed limiter for shared production enforcement.
+
+Limits are route-aware and may be overridden per endpoint with `RATE_LIMIT_ROUTE_LIMITS`. Client identity derivation supports proxy environments through `X-Forwarded-For` when `RATE_LIMIT_TRUST_PROXY=true`.
+
+## Ingestion Workflow
+The ingestion CLI normalizes source documents and writes FRBR-like graph entities.
+
+```bash
+python -m ingest run \
+  --source_url <source-url> \
+  --work_title "Document Title" \
+  --jurisdiction EU \
+  --authority_level 1 \
+  --valid_from 2024-01-01
+```
+
+## Evaluation
+The evaluation suite uses seeded fixtures and validates:
+- temporal precision,
+- citation validity,
+- refusal rate for advisory prompts.
+
+```bash
+PYTHONPATH=apps/api python -m eval run
+```
+
+The command requires an accessible Neo4j service (host profile default: `localhost:7687`; Docker profile default: `neo4j:7687`).
+
+## CI
+The CI workflow in `.github/workflows/ci.yml` contains:
+- Infrastructure job: Terraform formatting and validation (`infra/terraform`).
+- API job: lint, type checks, unit tests, and evaluation.
+- API dependency security gate: `pip-audit` report plus exception-policy enforcement using `security/pip-audit-exceptions.json`.
+- Web security gate: `npm audit --audit-level=critical`.
+- Web job: TypeScript checks and production builds.
+
+## Infrastructure as Code
+Terraform baseline for Cloud Run deployment is provided under `infra/terraform`.
+
+```bash
+cd infra/terraform
+terraform init
+terraform plan -var-file=environments/staging.tfvars.example
+```
+
+## Deployment and Rollout
+The release model uses explicit migrations and staged canary rollout with rollback guards. The operational policy and thresholds are defined in `docs/deployment-canary.md`.
+
+Canary automation workflow:
+- `.github/workflows/canary-gate.yml` evaluates guard thresholds from a metrics JSON payload.
+- Optional metric publication writes canary metrics to Cloud Monitoring for Terraform-managed alert policies.
 
 ## License
-
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## Contributing
-
-Contributions are welcome. Please open an issue to discuss proposed changes before submitting a pull request.
+This repository is distributed under the MIT License.

@@ -3,6 +3,8 @@
 
 # Environment variables
 .env
+.env.host
+.env.docker
 .env.local
 .env.*.local
 
@@ -30,6 +32,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+apps/web/.next/
+apps/web/next-env.d.ts
+*.tsbuildinfo
 
 # IDE
 .idea/
@@ -45,6 +50,12 @@ desktop.ini
 
 # Docker
 *.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
 
 # Data / Local storage (if applicable)
 data/

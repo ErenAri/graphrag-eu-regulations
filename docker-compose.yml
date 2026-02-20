@@ -1,9 +1,8 @@
-version: "3.9"
 services:
   neo4j:
     image: neo4j:5.21
     environment:
-      NEO4J_AUTH: "${NEO4J_USER}/${NEO4J_PASSWORD}"
+      NEO4J_AUTH: "${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-changeme}"
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -17,7 +16,7 @@ services:
   api:
     build: ./apps/api
     env_file:
-      - .env
+      - ${API_ENV_FILE:-.env}
     ports:
       - "8000:8000"
     depends_on:
@@ -33,7 +32,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
       - "3000:3000"
     depends_on:

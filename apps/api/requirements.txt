@@ -11,3 +11,6 @@ llama-index-llms-openai==0.1.27
 langgraph==0.2.16
 pytest==8.3.2
 sentence-transformers==2.7.0
+python-jose[cryptography]==3.3.0
+redis==5.0.8
+prometheus-client==0.20.0

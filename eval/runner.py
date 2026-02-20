@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -12,7 +11,7 @@ if str(API_PATH) not in sys.path:
     sys.path.insert(0, str(API_PATH))
 
 from app.db.neo4j import close_driver, get_driver
-from app.db.schema import ensure_schema
+from app.db.migrations import run_migrations
 from app.services.actions import get_valid_version, resolve_temporal_scope, search_items, search_text_units
 from app.services.answering import extract_citations, validate_answer
 from app.services.refusal import refusal_message
@@ -46,24 +45,9 @@ def wait_for_neo4j(retries: int = 20, delay: float = 2.0) -> None:
         raise last_error
 
 
-def run_seed(path: Path) -> None:
-    if not path.exists():
-        return
-    content = path.read_text(encoding="utf-8")
-    statements = [statement.strip() for statement in content.split(";") if statement.strip()]
-    if not statements:
-        return
-    driver = get_driver()
-    with driver.session() as session:
-        for statement in statements:
-            session.run(statement).consume()
-
-
 def seed_database() -> None:
     wait_for_neo4j()
-    ensure_schema()
-    seed_path = ROOT / "apps" / "api" / "migrations" / "003_seed.cypher"
-    run_seed(seed_path)
+    run_migrations(include_seed=True)
 
 
 def resolve_date(as_of_date: str) -> str:

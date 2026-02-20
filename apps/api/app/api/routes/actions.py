@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.security import Role, require_roles
 from app.services.actions import (
     get_valid_version,
     resolve_temporal_scope,
@@ -12,7 +13,12 @@ from app.services.actions import (
 from app.services.answering import answer_question
 from app.services.orchestration import run_orchestrated_query
 
-router = APIRouter(prefix="/actions")
+router = APIRouter(
+    prefix="/actions",
+)
+
+READ_ACCESS = [Depends(require_roles(Role.READ_ONLY, Role.COMPLIANCE_ANALYST, Role.ADMIN))]
+ELEVATED_ACCESS = [Depends(require_roles(Role.COMPLIANCE_ANALYST, Role.ADMIN))]
 
 
 class MetadataFilter(BaseModel):
@@ -122,7 +128,7 @@ class OrchestratedAnswerResponse(BaseModel):
     verification_results: dict
 
 
-@router.post("/search-items", response_model=SearchItemsResponse)
+@router.post("/search-items", response_model=SearchItemsResponse, dependencies=READ_ACCESS)
 def search_items_endpoint(payload: SearchItemsRequest) -> SearchItemsResponse:
     items = search_items(
         payload.query,
@@ -132,7 +138,7 @@ def search_items_endpoint(payload: SearchItemsRequest) -> SearchItemsResponse:
     return SearchItemsResponse(items=items)
 
 
-@router.post("/resolve-temporal-scope", response_model=ResolveTemporalScopeResponse)
+@router.post("/resolve-temporal-scope", response_model=ResolveTemporalScopeResponse, dependencies=READ_ACCESS)
 def resolve_temporal_scope_endpoint(payload: ResolveTemporalScopeRequest) -> ResolveTemporalScopeResponse:
     try:
         result = resolve_temporal_scope(payload.date_string)
@@ -141,7 +147,7 @@ def resolve_temporal_scope_endpoint(payload: ResolveTemporalScopeRequest) -> Res
     return ResolveTemporalScopeResponse(**result)
 
 
-@router.post("/get-valid-version", response_model=GetValidVersionResponse)
+@router.post("/get-valid-version", response_model=GetValidVersionResponse, dependencies=READ_ACCESS)
 def get_valid_version_endpoint(payload: GetValidVersionRequest) -> GetValidVersionResponse:
     try:
         result = get_valid_version(payload.component_id, payload.target_date)
@@ -156,13 +162,13 @@ def get_valid_version_endpoint(payload: GetValidVersionRequest) -> GetValidVersi
     return GetValidVersionResponse(**result)
 
 
-@router.post("/search-text-units", response_model=SearchTextUnitsResponse)
+@router.post("/search-text-units", response_model=SearchTextUnitsResponse, dependencies=READ_ACCESS)
 def search_text_units_endpoint(payload: SearchTextUnitsRequest) -> SearchTextUnitsResponse:
     items = search_text_units(payload.expression_id, payload.semantic_query, payload.top_k)
     return SearchTextUnitsResponse(items=items)
 
 
-@router.post("/answer", response_model=AnswerResponse)
+@router.post("/answer", response_model=AnswerResponse, dependencies=ELEVATED_ACCESS)
 def answer_endpoint(payload: AnswerRequest) -> AnswerResponse:
     result = answer_question(
         question=payload.question,
@@ -175,7 +181,7 @@ def answer_endpoint(payload: AnswerRequest) -> AnswerResponse:
     return AnswerResponse(**result)
 
 
-@router.post("/answer-orchestrated", response_model=OrchestratedAnswerResponse)
+@router.post("/answer-orchestrated", response_model=OrchestratedAnswerResponse, dependencies=ELEVATED_ACCESS)
 def answer_orchestrated_endpoint(payload: OrchestratedAnswerRequest) -> OrchestratedAnswerResponse:
     result = run_orchestrated_query(
         question=payload.question,

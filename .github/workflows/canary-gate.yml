@@ -1,0 +1,81 @@
+name: canary-gate
+on:
+  workflow_dispatch:
+    inputs:
+      metrics_json:
+        description: "JSON metrics payload for canary decision"
+        required: true
+        type: string
+      publish_metrics:
+        description: "Publish canary metrics to Cloud Monitoring"
+        required: false
+        type: boolean
+        default: false
+      project_id:
+        description: "GCP project ID for metric publishing"
+        required: false
+        type: string
+      service_name:
+        description: "Service label used in canary metric series"
+        required: false
+        type: string
+      environment:
+        description: "Environment label used in canary metric series"
+        required: false
+        type: string
+        default: "staging"
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Write metrics payload
+        env:
+          METRICS_JSON: ${{ inputs.metrics_json }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = os.environ["METRICS_JSON"]
+          json.loads(payload)
+          Path("canary-metrics.json").write_text(payload, encoding="utf-8")
+          PY
+      - name: Validate publishing prerequisites
+        if: ${{ inputs.publish_metrics }}
+        run: |
+          test -n "${{ inputs.project_id }}" || { echo "project_id is required when publish_metrics=true"; exit 1; }
+          test -n "${{ inputs.service_name }}" || { echo "service_name is required when publish_metrics=true"; exit 1; }
+          test -n "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" || { echo "Missing secret: GCP_WORKLOAD_IDENTITY_PROVIDER"; exit 1; }
+          test -n "${{ secrets.GCP_CANARY_METRIC_WRITER_SERVICE_ACCOUNT }}" || { echo "Missing secret: GCP_CANARY_METRIC_WRITER_SERVICE_ACCOUNT"; exit 1; }
+      - name: Authenticate to Google Cloud
+        id: auth
+        if: ${{ inputs.publish_metrics }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_CANARY_METRIC_WRITER_SERVICE_ACCOUNT }}
+          token_format: access_token
+      - name: Install dependencies for metric publishing
+        if: ${{ inputs.publish_metrics }}
+        run: python -m pip install requests
+      - name: Publish canary metrics to Cloud Monitoring
+        if: ${{ inputs.publish_metrics }}
+        env:
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          python scripts/publish_canary_metrics.py \
+            --metrics canary-metrics.json \
+            --project-id "${{ inputs.project_id }}" \
+            --service-name "${{ inputs.service_name }}" \
+            --environment "${{ inputs.environment }}"
+      - name: Evaluate canary guard conditions
+        run: python scripts/check_canary_metrics.py --metrics canary-metrics.json
