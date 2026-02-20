@@ -16,6 +16,18 @@ SAT Graph RAG is a graph-based retrieval-augmented generation system for tempora
 - `eval`: evaluation runner and fixtures for temporal precision, citation validity, and refusal behavior.
 - `apps/api/migrations`: versioned Cypher migrations for graph schema and seed state.
 
+## System Architecture Diagram
+```mermaid
+flowchart LR
+    User[Analyst / Client] --> Web[Next.js Web Service]
+    Web --> API[FastAPI API Service]
+    API --> Neo4j[(Neo4j AuraDB)]
+    API --> LLM[OpenAI-Compatible Model Endpoint]
+    Ingest[Ingestion Pipeline] --> Neo4j
+    Eval[Evaluation Runner] --> API
+    Eval --> Neo4j
+```
+
 ## Production Baseline
 The repository currently targets the following deployment profile:
 - API and web services on Cloud Run.
@@ -133,6 +145,25 @@ Configuration is loaded from environment variables and validated at startup. The
 - Request correlation is enforced through request IDs propagated in logs and response headers.
 - Web framework remediation is applied through Next.js `15.5.10`; compensating controls remain enabled to disable image optimization and reject `/_next/image`, `next-action`, and non-read web requests.
 
+## Query Processing Flow Diagram
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Web
+    participant API
+    participant Graph as Neo4j
+    participant Model as LLM Endpoint
+
+    Client->>Web: Submit question (+ optional as_of date)
+    Web->>API: Forward request with identity context
+    API->>API: Validate JWT + RBAC policy
+    API->>Graph: Retrieve temporally valid evidence
+    API->>Model: Generate grounded answer from evidence
+    Model-->>API: Structured answer draft
+    API-->>Web: Answer + citations + request_id
+    Web-->>Client: Render response
+```
+
 ## Rate Limiting
 The API supports two limiter backends:
 - in-memory limiter for local development and single-instance execution,
@@ -187,6 +218,22 @@ The release model uses explicit migrations and staged canary rollout with rollba
 Canary automation workflow:
 - `.github/workflows/canary-gate.yml` evaluates guard thresholds from a metrics JSON payload.
 - Optional metric publication writes canary metrics to Cloud Monitoring for Terraform-managed alert policies.
+
+## Release Progression Diagram
+```mermaid
+flowchart TD
+    Build[Build + Test + Security Gates] --> Migrate[Run Explicit DB Migration]
+    Migrate --> Canary5[Canary 5%]
+    Canary5 --> Guard5{Guard Conditions Pass?}
+    Guard5 -- Yes --> Canary25[Canary 25%]
+    Guard5 -- No --> Rollback[Rollback Revision]
+    Canary25 --> Guard25{Guard Conditions Pass?}
+    Guard25 -- Yes --> Canary50[Canary 50%]
+    Guard25 -- No --> Rollback
+    Canary50 --> Guard50{Guard Conditions Pass?}
+    Guard50 -- Yes --> Full[Promote to 100%]
+    Guard50 -- No --> Rollback
+```
 
 ## License
 This repository is distributed under the MIT License.
