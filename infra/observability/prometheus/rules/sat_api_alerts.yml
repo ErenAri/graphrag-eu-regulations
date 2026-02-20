@@ -1,0 +1,100 @@
+groups:
+  - name: sat_api_derived_metrics
+    interval: 30s
+    rules:
+      - record: sat_api:request_rate_5m
+        expr: sum(rate(sat_api_http_requests_total[5m]))
+
+      - record: sat_api:error_rate_5xx_5m
+        expr: |
+          sum(rate(sat_api_http_requests_total{status_code=~"5.."}[5m]))
+          / clamp_min(sum(rate(sat_api_http_requests_total[5m])), 0.001)
+
+      - record: sat_api:auth_failure_rate_5m
+        expr: |
+          sum(rate(sat_api_http_requests_total{status_code=~"401|403"}[5m]))
+          / clamp_min(sum(rate(sat_api_http_requests_total[5m])), 0.001)
+
+      - record: sat_api:p95_latency_seconds_5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sat_api_http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: sat_api:auth_failure_rate_baseline_1h_offset
+        expr: |
+          sum(rate(sat_api_http_requests_total{status_code=~"401|403"}[1h] offset 1h))
+          / clamp_min(sum(rate(sat_api_http_requests_total[1h] offset 1h)), 0.001)
+
+      - record: sat_api:p95_latency_seconds_baseline_1h_offset
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sat_api_http_request_duration_seconds_bucket[1h] offset 1h)) by (le)
+          )
+
+  - name: sat_api_canary_guard_alerts
+    interval: 30s
+    rules:
+      - alert: SatApiScrapeDown
+        expr: up{job="sat-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: SAT API metrics endpoint is unreachable
+          description: Prometheus cannot scrape api:8000/metrics for at least 2 minutes.
+
+      - alert: SatApiHigh5xxRate
+        expr: sat_api:error_rate_5xx_5m > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: SAT API 5xx error rate exceeded 1%
+          description: 5xx request ratio is above the canary guard threshold (1%) for 5 minutes.
+
+      - alert: SatApiP95LatencyDegradation
+        expr: |
+          sat_api:p95_latency_seconds_baseline_1h_offset > 0
+          and
+          (
+            sat_api:p95_latency_seconds_5m
+            / clamp_min(sat_api:p95_latency_seconds_baseline_1h_offset, 0.001)
+          ) > 1.2
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: SAT API p95 latency degraded beyond 20%
+          description: Current p95 latency over 5 minutes is more than 1.2x baseline (1 hour, offset by 1 hour).
+
+      - alert: SatApiAuthFailureRateDegradation
+        expr: |
+          sat_api:auth_failure_rate_baseline_1h_offset > 0
+          and
+          (
+            sat_api:auth_failure_rate_5m
+            / clamp_min(sat_api:auth_failure_rate_baseline_1h_offset, 0.0001)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: SAT API auth failure rate exceeded 2x baseline
+          description: 401/403 ratio over 5 minutes is more than 2x baseline (1 hour, offset by 1 hour).
+
+      - alert: SatApiRateLimitRejectionsSpike
+        expr: sum(rate(sat_api_rate_limit_rejections_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: SAT API rate-limit rejection spike detected
+          description: Aggregate rate-limit rejections exceeded 1 request/second over 5 minutes.

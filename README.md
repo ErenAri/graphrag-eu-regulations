@@ -40,6 +40,7 @@ Reference documents:
 - `docs/operability.md`
 - `docs/security.md`
 - `docs/deployment-canary.md`
+- `docs/observability-local.md`
 - `docs/config-profiles.md`
 - `docs/runbooks/README.md`
 
@@ -91,6 +92,11 @@ PYTHONPATH=apps/api venv/Scripts/python -m app.db.migrate
 ```bash
 docker-compose --env-file .env.docker up -d neo4j
 APP_ENV_FILE=.env.host PYTHONPATH=apps/api venv/Scripts/python -m app.db.migrate
+```
+
+Optional local observability stack (no GCP dependency):
+```bash
+API_ENV_FILE=.env.docker docker-compose --env-file .env.docker --profile observability up -d neo4j api prometheus alertmanager grafana
 ```
 
 ### Run API tests and checks
@@ -211,6 +217,24 @@ cd infra/terraform
 terraform init
 terraform plan -var-file=environments/staging.tfvars.example
 ```
+
+## Local Observability
+The Docker Compose `observability` profile provisions:
+- Prometheus (`http://localhost:9090`)
+- Alertmanager (`http://localhost:9093`)
+- Grafana (`http://localhost:3001`)
+
+Default Grafana credentials are sourced from `.env.docker`:
+- `GRAFANA_ADMIN_USER`
+- `GRAFANA_ADMIN_PASSWORD`
+
+Prometheus alert rules are defined in `infra/observability/prometheus/rules/sat_api_alerts.yml`.
+
+External alert routing variables in `.env.docker`:
+- `ALERTMANAGER_SLACK_WEBHOOK_URL`
+- `ALERTMANAGER_SLACK_CHANNEL`
+- `ALERTMANAGER_SLACK_USERNAME`
+- `ALERTMANAGER_TEAMS_WEBHOOK_URL`
 
 ## Deployment and Rollout
 The release model uses explicit migrations and staged canary rollout with rollback guards. The operational policy and thresholds are defined in `docs/deployment-canary.md`.

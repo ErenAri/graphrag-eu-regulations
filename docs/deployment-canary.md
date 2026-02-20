@@ -79,3 +79,9 @@ Workflow `.github/workflows/canary-gate.yml` supports both gate evaluation and o
   - `GCP_CANARY_METRIC_WRITER_SERVICE_ACCOUNT`
 
 The metric writer service account should have Monitoring time-series write permissions.
+
+## Local Non-GCP Monitoring Path
+When Cloud Monitoring is not used, canary guard observability can be executed locally with:
+- Prometheus rule evaluation (`infra/observability/prometheus/rules/sat_api_alerts.yml`),
+- Alertmanager local alert routing,
+- Grafana dashboard `SAT API Operability`.

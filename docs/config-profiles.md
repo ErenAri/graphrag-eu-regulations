@@ -42,6 +42,12 @@ docker-compose --env-file .env.docker up -d neo4j
 API_ENV_FILE=.env.docker docker-compose --env-file .env.docker up -d api web
 ```
 
+Optional local observability stack:
+
+```bash
+API_ENV_FILE=.env.docker docker-compose --env-file .env.docker --profile observability up -d neo4j api prometheus alertmanager grafana
+```
+
 ## Runtime Resolution Rules
 - API settings loader reads from `APP_ENV_FILE` if provided; otherwise `.env`.
 - Ingestion settings loader reads from `INGEST_ENV_FILE` if provided, then `APP_ENV_FILE`, then `.env`.

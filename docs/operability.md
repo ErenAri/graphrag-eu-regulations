@@ -31,6 +31,8 @@ All environments should execute equivalent container artifacts. Behavioral varia
   - liveness endpoint: `/health`
   - readiness endpoint: `/ready`
   - metrics endpoint: `/metrics`
+- Local non-GCP deployment path:
+  - Prometheus + Alertmanager + Grafana stack via Docker Compose `observability` profile.
 - Required operational signals:
   - route-level request count and error count,
   - latency distribution by endpoint,

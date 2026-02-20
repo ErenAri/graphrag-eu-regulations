@@ -1,0 +1,66 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: "__ALERTMANAGER_SLACK_WEBHOOK_URL__"
+
+route:
+  receiver: local-default
+  group_by: ["alertname", "service", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  routes:
+    - receiver: slack-critical
+      matchers:
+        - severity="critical"
+      continue: true
+    - receiver: slack-warning
+      matchers:
+        - severity="warning"
+      continue: true
+    - receiver: teams-critical
+      matchers:
+        - severity="critical"
+      continue: true
+    - receiver: teams-warning
+      matchers:
+        - severity="warning"
+      continue: true
+
+receivers:
+  - name: local-default
+  - name: slack-critical
+    slack_configs:
+      - channel: "__ALERTMANAGER_SLACK_CHANNEL__"
+        username: "__ALERTMANAGER_SLACK_USERNAME__"
+        icon_emoji: ":rotating_light:"
+        send_resolved: true
+        title: "[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .CommonLabels.severity }})"
+        text: >-
+          {{ range .Alerts -}}
+          *Service:* {{ .Labels.service }}
+          *Instance:* {{ .Labels.instance }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+  - name: slack-warning
+    slack_configs:
+      - channel: "__ALERTMANAGER_SLACK_CHANNEL__"
+        username: "__ALERTMANAGER_SLACK_USERNAME__"
+        icon_emoji: ":warning:"
+        send_resolved: true
+        title: "[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .CommonLabels.severity }})"
+        text: >-
+          {{ range .Alerts -}}
+          *Service:* {{ .Labels.service }}
+          *Instance:* {{ .Labels.instance }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+  - name: teams-critical
+    webhook_configs:
+      - url: "__ALERTMANAGER_TEAMS_WEBHOOK_URL__"
+        send_resolved: true
+  - name: teams-warning
+    webhook_configs:
+      - url: "__ALERTMANAGER_TEAMS_WEBHOOK_URL__"
+        send_resolved: true
